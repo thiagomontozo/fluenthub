@@ -116,7 +116,7 @@ Operators register students, manage permitted enrollment data, issue mock-provid
 
 ## Live Classes
 
-`LiveClassProvider` defines session creation, lifecycle, role-specific join information and recording controls. `MockProvider` produces explicit demonstration data; it is not a conferencing system. LiveKit, Jitsi or another provider can be added as an adapter.
+`LiveClassProvider` defines session creation, lifecycle, role-specific join information and recording controls. The LiveKit adapter creates and deletes rooms through its Twirp API, issues 15-minute role-scoped JWTs and controls Egress recording. The React classroom connects with `livekit-client`; API secrets never reach the browser. `MockProvider` remains available for demonstrations.
 
 ## Class Recordings
 
@@ -172,7 +172,7 @@ Invoices store `amountCents` as `int64`, never floating-point currency. Draft, i
 
 ## Billing Provider Abstraction
 
-`BillingProvider` exposes create, fetch and cancel operations. `MockBillingProvider` returns URLs and barcodes visibly marked `DEMONSTRATION-NOT-PAYABLE`. It does **not** generate a bank boleto, PIX charge or real payment instruction.
+`BillingProvider` exposes customer provisioning plus create, fetch and cancel operations. The Asaas adapter supports sandbox or production endpoints, BOLETO issuance, identification-field retrieval and cancellation while keeping money in integer cents. `MockBillingProvider` remains available and visibly non-payable.
 
 ## Notifications
 
@@ -215,11 +215,11 @@ Prerequisites: Go 1.24+, Node.js 22+, PostgreSQL 17+ and a migration runner comp
 5. From `frontend`, install dependencies and run `npm run dev`.
 6. Open `/setup` to atomically create the school, branding, first administrator, first unit, system roles, initial skills and academic policies.
 
-These commands are documentation only; they were not executed for this delivery.
+The backend build and local provider/storage contract validator have been executed. Full application runtime still requires PostgreSQL and provider credentials.
 
 ## Configuration
 
-`.env.example` documents environment, ports, PostgreSQL URL, allowed web origin, session secret, local storage path, upload limit, logging, locale, timezone and provider selection. Never commit `.env`.
+`.env.example` documents environment, ports, PostgreSQL URL, origins, provider credentials, AES storage key, ClamAV address, backup interval and retention. Never commit `.env`. Production configuration refuses plaintext storage or disabled malware scanning.
 
 ## API
 
@@ -233,11 +233,11 @@ See [API documentation](docs/api.md).
 
 ## Object Storage
 
-`ObjectStorage` exposes `Put`, `Open`, `Delete`, `Exists` and `Close`. `LocalObjectStorage` generates cryptographically random keys, validates namespaces, caps stream size and confines paths to the configured root. File MIME must be sniffed and authorized by domain handlers before storage.
+`ObjectStorage` exposes `Put`, `Open`, `Delete`, `Exists` and `Close`. Uploads are quarantined, size-limited, streamed to ClamAV, then encrypted in authenticated AES-256-GCM chunks before receiving an opaque local key. Scheduled `tar.gz` snapshots contain encrypted objects, receive SHA-256 sidecars and follow configured retention. Database backup and off-site replication remain deployment responsibilities. See [storage security](docs/storage-security.md).
 
 ## Docker
 
-`compose.yml` defines PostgreSQL, backend and frontend, plus isolated database and object-storage volumes. Images use multi-stage builds; the backend runtime uses a non-root account. Docker was not executed in this version.
+`compose.yml` defines PostgreSQL, backend, frontend and ClamAV, plus isolated database, encrypted object-storage, backup and signature-database volumes. Images use multi-stage builds; the backend runtime uses a non-root account.
 
 ## Project Structure
 
@@ -254,10 +254,11 @@ Thirteen ADRs document the main architectural choices: Go, React/TypeScript, mod
 ## Limitations
 
 - Experimental foundation; no claim of production readiness.
-- No automated tests, CI, build verification or runtime validation yet.
-- Mock live and billing providers only; demonstration invoice data is not payable.
-- Local object storage requires deployment-level backup, encryption and malware scanning decisions.
-- Certificate layout should still be visually reviewed against each school's uploaded assets before real issuance.
+- No automated test suite or CI yet; backend builds and deterministic integration-contract validation pass locally.
+- LiveKit and Asaas adapters were validated against local contract servers, not external accounts, because credentials were not present.
+- Asaas webhooks, automatic reconciliation and idempotent retry keys are not implemented yet.
+- Storage snapshots cover object files, not PostgreSQL; off-site replication, key custody/rotation and restore drills are operational responsibilities.
+- The certificate layout was rendered and visually approved with fictitious data; each school's uploaded logo and unusually long names still require acceptance review.
 - A frontend dependency lockfile could not be generated because Node/npm was unavailable in the authoring environment; dependency versions are exact in `package.json`.
 - Legal/privacy compliance is deployment- and organization-specific.
 
@@ -267,7 +268,7 @@ Thirteen ADRs document the main architectural choices: Go, React/TypeScript, mod
 
 - automated tests and GitHub Actions CI
 - email notifications
-- real LiveKit/Jitsi and billing providers
+- authenticated Asaas webhooks, reconciliation and provider retry controls
 - richer attendance reports, CSV student import and PDF academic reports
 - improved certificate templates and document preview
 

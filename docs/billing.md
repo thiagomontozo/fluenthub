@@ -2,6 +2,6 @@
 
 `Invoice` represents an operational charge and stores currency in `amount_cents` (`int64`). `Payment` records a settlement without overwriting issuance history. Invoice states are draft, issued, paid, overdue and cancelled.
 
-`BillingProvider` creates, fetches and cancels provider-side invoices. The mock adapter returns identifiers, URLs and barcode strings explicitly marked as demonstration and not payable. It does not contact a bank, PSP, PIX network or boleto clearing system.
+`BillingProvider` provisions provider customers and creates, fetches and cancels provider-side invoices. The Asaas adapter authenticates with `access_token`, supports sandbox and production base URLs, creates BOLETO charges, retrieves the identification field and maps provider states into FluentHub states. Values are serialized directly from integer cents to exact two-decimal JSON numbers. Provider customer IDs are persisted in `billing_accounts`.
 
-A real Asaas, Efí or other PSP adapter must add authenticated webhooks, signature verification, idempotency, reconciliation, secret rotation and careful redaction. URLs/barcodes should be shown only to authorized school staff and the owning student. Real financial integration is not implemented in 0.1.0.
+The mock adapter remains explicit and non-payable. Asaas API error bodies and credentials are not logged. URLs and barcodes should be shown only to authorized school staff and the owning student. Authenticated webhooks, automatic payment reconciliation, idempotent retry keys, refunds and PIX remain future work; enabling `BILLING_PROVIDER=asaas` therefore requires an operational reconciliation process.

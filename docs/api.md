@@ -13,6 +13,7 @@ All private routes are versioned below `/api/v1`. JSON errors contain `code`, sa
 
 - `/courses`, `/levels`, `/modules`, `/classes`, `/enrollments`
 - `/lessons`, `/live-sessions`, `/attendance`
+- `POST /lessons/:lessonId/live-session`; `POST /live-sessions/:id/start|end`; `GET /lessons/:lessonId/live-join`; `POST /live-sessions/:id/recording/start|stop`
 - `/exercises`, `/exercises/:id/attempts`, answer save, submit and grading
 - `/exams`, `/exams/:id/attempts`, incremental answers, submit and grading
 - `/grading`, `/academic`, `/certificates`, `/audit`

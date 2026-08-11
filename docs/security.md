@@ -12,7 +12,7 @@ The final privileged administrator must be protected with a transaction/lock che
 
 ## Files, support and certificates
 
-Storage keys are generated, paths confined and uploads size/MIME checked. Download authorization is checked from the owning lesson, attempt, ticket or certificate—not possession of a key. Internal support messages are excluded from student/teacher projections. Public certificate results expose a minimal projection.
+Storage keys are generated, paths confined and uploads size/MIME checked. New content is quarantined, scanned using ClamAV's `INSTREAM` protocol and encrypted in independently authenticated AES-256-GCM chunks. Production startup requires both a valid 32-byte base64 key and ClamAV. Download authorization is checked from the owning lesson, attempt, ticket or certificate—not possession of a key. Internal support messages are excluded from student/teacher projections. Public certificate results expose a minimal projection.
 
 ## Logging and audit
 
@@ -20,4 +20,4 @@ Structured logs use request IDs and avoid passwords, session tokens, authorizati
 
 ## Limitations
 
-This architecture provides privacy-oriented controls but does not claim automatic legal compliance. Deployment must address TLS, trusted proxies, backups, encryption, malware scanning, retention, incident response, consent, regional requirements, dependency review and rate limiting. No penetration test or runtime security validation has been performed.
+This architecture provides privacy-oriented controls but does not claim automatic legal compliance. Storage backups are local encrypted-object snapshots with checksums; PostgreSQL backup, off-site copies, key management/rotation and restore drills remain deployment responsibilities. Deployment must also address TLS, trusted proxies, incident response, consent, regional requirements, dependency review and rate limiting. No penetration test has been performed.
