@@ -1,0 +1,9 @@
+import type { ReactNode } from 'react'
+import { ArrowUpRight, CheckCircle2, Clock3, Search } from 'lucide-react'
+export function StatCard({ label, value, note, tone = 'indigo' }: { label: string; value: string; note: string; tone?: 'indigo' | 'emerald' | 'amber' | 'rose' }) { return <article className="card stat-card"><div className={`stat-icon ${tone}`}><ArrowUpRight size={18}/></div><p>{label}</p><strong>{value}</strong><span>{note}</span></article> }
+export function Progress({ value, label }: { value: number; label?: string }) { return <div className="progress-wrap">{label && <div className="progress-label"><span>{label}</span><b>{value}%</b></div>}<div className="progress"><span style={{ width: `${Math.min(100, Math.max(0, value))}%` }}/></div></div> }
+export function Badge({ children, tone='neutral' }: { children: ReactNode; tone?: 'success'|'warning'|'danger'|'info'|'neutral' }) { return <span className={`badge ${tone}`}>{children}</span> }
+export function EmptyState({ title, message }: { title: string; message: string }) { return <div className="empty"><CheckCircle2/><h3>{title}</h3><p>{message}</p></div> }
+export function PageHeader({ eyebrow, title, description, action }: { eyebrow: string; title: string; description: string; action?: ReactNode }) { return <header className="page-header"><div><span>{eyebrow}</span><h1>{title}</h1><p>{description}</p></div>{action}</header> }
+export function SearchBox({ placeholder='Search' }: { placeholder?: string }) { return <label className="search-box"><Search size={18}/><span className="sr-only">{placeholder}</span><input placeholder={placeholder}/><kbd>⌘ K</kbd></label> }
+export function TimelineItem({ title, meta, done=false }: { title: string; meta: string; done?: boolean }) { return <div className="timeline-item"><span className={done ? 'done' : ''}>{done ? <CheckCircle2/> : <Clock3/>}</span><div><b>{title}</b><p>{meta}</p></div></div> }
