@@ -1,0 +1,16 @@
+FROM golang:1.24-alpine AS build
+WORKDIR /src
+COPY backend/go.mod backend/go.sum* ./
+RUN go mod download
+COPY backend/ .
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /fluenthub-api ./cmd/api
+
+FROM alpine:3.22
+RUN addgroup -S fluenthub && adduser -S -G fluenthub fluenthub
+WORKDIR /app
+COPY --from=build /fluenthub-api /app/fluenthub-api
+COPY backend/migrations /app/migrations
+RUN mkdir -p /app/data/storage && chown -R fluenthub:fluenthub /app
+USER fluenthub
+EXPOSE 8080
+ENTRYPOINT ["/app/fluenthub-api"]
