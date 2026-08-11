@@ -33,6 +33,7 @@ type Dependencies struct {
 	Certificates           *certificates.Service
 	Hub                    *notifications.Hub
 	Billing                *billing.Service
+	AsaasWebhookToken      string
 	Notifications          *notifications.Service
 	Assessment             *assessment.Service
 	Support                *support.Service
@@ -84,6 +85,9 @@ func New(d Dependencies) http.Handler {
 		}
 		writeJSON(w, http.StatusOK, certificate)
 	})
+	if d.AsaasWebhookToken != "" {
+		mux.Handle("POST /api/v1/webhooks/asaas", billing.AsaasWebhookHandler(d.AsaasWebhookToken, d.Billing))
+	}
 	mux.HandleFunc("GET /api/v1/setup/status", func(w http.ResponseWriter, r *http.Request) {
 		configured, err := d.Setup.Status(r.Context())
 		if err != nil {

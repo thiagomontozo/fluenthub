@@ -172,7 +172,7 @@ Invoices store `amountCents` as `int64`, never floating-point currency. Draft, i
 
 ## Billing Provider Abstraction
 
-`BillingProvider` exposes customer provisioning plus create, fetch and cancel operations. The Asaas adapter supports sandbox or production endpoints, BOLETO issuance, identification-field retrieval and cancellation while keeping money in integer cents. `MockBillingProvider` remains available and visibly non-payable.
+`BillingProvider` exposes customer provisioning plus create, fetch and cancel operations. The Asaas adapter supports sandbox or production endpoints, BOLETO issuance, identification-field retrieval and cancellation while keeping money in integer cents. Authenticated webhooks are deduplicated by event ID and update invoices/payments transactionally. A bounded scheduler reconciles provider state at startup and every configured interval, preserving run statistics and never regressing terminal states because of delayed events. `MockBillingProvider` remains available and visibly non-payable.
 
 ## Notifications
 
@@ -254,9 +254,9 @@ Thirteen ADRs document the main architectural choices: Go, React/TypeScript, mod
 ## Limitations
 
 - Experimental foundation; no claim of production readiness.
-- No automated test suite or CI yet; backend builds and deterministic integration-contract validation pass locally.
+- Focused automated Asaas webhook/provider tests exist and pass locally; broader domain coverage and CI remain future work.
 - LiveKit and Asaas adapters were validated against local contract servers, not external accounts, because credentials were not present.
-- Asaas webhooks, automatic reconciliation and idempotent retry keys are not implemented yet.
+- The PostgreSQL integration test requires `FLUENTHUB_TEST_DATABASE_URL`; it is skipped when an isolated test database is unavailable.
 - Storage snapshots cover object files, not PostgreSQL; off-site replication, key custody/rotation and restore drills are operational responsibilities.
 - The certificate layout was rendered and visually approved with fictitious data; each school's uploaded logo and unusually long names still require acceptance review.
 - A frontend dependency lockfile could not be generated because Node/npm was unavailable in the authoring environment; dependency versions are exact in `package.json`.
@@ -268,7 +268,7 @@ Thirteen ADRs document the main architectural choices: Go, React/TypeScript, mod
 
 - automated tests and GitHub Actions CI
 - email notifications
-- authenticated Asaas webhooks, reconciliation and provider retry controls
+- broader automated test coverage and provider retry controls
 - richer attendance reports, CSV student import and PDF academic reports
 - improved certificate templates and document preview
 

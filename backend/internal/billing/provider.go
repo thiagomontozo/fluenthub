@@ -17,6 +17,7 @@ type Invoice struct {
 	IssuedAt, PaidAt, CancelledAt                                                                *time.Time
 }
 type BillingProvider interface {
+	Name() string
 	EnsureCustomer(context.Context, Customer) (string, error)
 	CreateInvoice(context.Context, Invoice) (Invoice, error)
 	GetInvoice(context.Context, string) (Invoice, error)
@@ -24,6 +25,8 @@ type BillingProvider interface {
 }
 type Customer struct{ ExternalID, Name, Email string }
 type MockProvider struct{}
+
+func (MockProvider) Name() string { return "mock" }
 
 func (MockProvider) EnsureCustomer(_ context.Context, customer Customer) (string, error) {
 	if customer.ExternalID == "" || customer.Name == "" {

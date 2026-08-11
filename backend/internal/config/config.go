@@ -14,9 +14,11 @@ type Config struct {
 	Locale, Timezone, LiveProvider, BillingProvider, LogLevel             string
 	LiveKitURL, LiveKitAPIKey, LiveKitAPISecret                           string
 	AsaasBaseURL, AsaasAPIKey                                             string
+	AsaasWebhookToken                                                     string
 	StorageEncryptionKey, MalwareScanner, ClamAVAddress                   string
 	BackupPath                                                            string
 	BackupInterval, BackupRetention                                       time.Duration
+	BillingReconcileInterval                                              time.Duration
 	AllowLegacyPlaintext                                                  bool
 	MaxUploadBytes                                                        int64
 }
@@ -35,6 +37,7 @@ func Load() (Config, error) {
 		LiveProvider: env("LIVE_CLASS_PROVIDER", "mock"), BillingProvider: env("BILLING_PROVIDER", "mock"), LogLevel: env("LOG_LEVEL", "info"),
 		LiveKitURL: strings.TrimRight(os.Getenv("LIVEKIT_URL"), "/"), LiveKitAPIKey: os.Getenv("LIVEKIT_API_KEY"), LiveKitAPISecret: os.Getenv("LIVEKIT_API_SECRET"),
 		AsaasBaseURL: strings.TrimRight(env("ASAAS_BASE_URL", "https://api-sandbox.asaas.com/v3"), "/"), AsaasAPIKey: os.Getenv("ASAAS_API_KEY"),
+		AsaasWebhookToken: os.Getenv("ASAAS_WEBHOOK_TOKEN"), BillingReconcileInterval: durationMinutes("BILLING_RECONCILE_MINUTES", 15),
 		StorageEncryptionKey: os.Getenv("STORAGE_ENCRYPTION_KEY"), MalwareScanner: env("MALWARE_SCANNER", "disabled"), ClamAVAddress: env("CLAMAV_ADDRESS", "clamav:3310"),
 		BackupPath: env("BACKUP_PATH", "./data/backups"), BackupInterval: durationHours("BACKUP_INTERVAL_HOURS", 24), BackupRetention: durationHours("BACKUP_RETENTION_HOURS", 24*30),
 		AllowLegacyPlaintext: env("STORAGE_ALLOW_LEGACY_PLAINTEXT", "false") == "true",
@@ -51,8 +54,8 @@ func Load() (Config, error) {
 	if c.BillingProvider != "mock" && c.BillingProvider != "asaas" {
 		return Config{}, fmt.Errorf("BILLING_PROVIDER must be mock or asaas")
 	}
-	if c.BillingProvider == "asaas" && c.AsaasAPIKey == "" {
-		return Config{}, fmt.Errorf("ASAAS_API_KEY is required for asaas")
+	if c.BillingProvider == "asaas" && (c.AsaasAPIKey == "" || len(c.AsaasWebhookToken) < 32 || len(c.AsaasWebhookToken) > 255) {
+		return Config{}, fmt.Errorf("ASAAS_API_KEY and ASAAS_WEBHOOK_TOKEN (32-255 characters) are required for asaas")
 	}
 	if c.MalwareScanner != "disabled" && c.MalwareScanner != "clamav" {
 		return Config{}, fmt.Errorf("MALWARE_SCANNER must be disabled or clamav")
@@ -75,6 +78,14 @@ func durationHours(key string, fallback int) time.Duration {
 		return time.Duration(fallback) * time.Hour
 	}
 	return time.Duration(value) * time.Hour
+}
+
+func durationMinutes(key string, fallback int) time.Duration {
+	value, err := strconv.Atoi(env(key, strconv.Itoa(fallback)))
+	if err != nil || value < 1 {
+		return time.Duration(fallback) * time.Minute
+	}
+	return time.Duration(value) * time.Minute
 }
 
 func env(key, fallback string) string {

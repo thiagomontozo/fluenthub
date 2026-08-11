@@ -18,6 +18,8 @@ type AsaasProvider struct {
 	client          *http.Client
 }
 
+func (*AsaasProvider) Name() string { return "asaas" }
+
 func NewAsaasProvider(baseURL, apiKey string, client *http.Client) (*AsaasProvider, error) {
 	parsed, err := url.Parse(baseURL)
 	if err != nil || parsed.Host == "" || apiKey == "" {

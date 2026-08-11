@@ -96,10 +96,12 @@ func main() {
 	billingService := billing.NewService(db, billingProvider)
 	liveService := liveclasses.NewService(db, liveProvider)
 	notificationService := notifications.NewService(db, hub)
-	handler := router.New(router.Dependencies{DB: db, Storage: store, StorageReady: malwareReady, LiveClasses: liveService, Users: userStore, Certificates: certificates.New(db), Hub: hub, Billing: billingService, Notifications: notificationService, Assessment: assessment.New(db), Support: support.NewService(db), Records: records.New(db), Setup: setup.New(db), WebOrigin: cfg.WebOrigin, Environment: cfg.Environment})
+	handler := router.New(router.Dependencies{DB: db, Storage: store, StorageReady: malwareReady, LiveClasses: liveService, Users: userStore, Certificates: certificates.New(db), Hub: hub, Billing: billingService, AsaasWebhookToken: cfg.AsaasWebhookToken, Notifications: notificationService, Assessment: assessment.New(db), Support: support.NewService(db), Records: records.New(db), Setup: setup.New(db), WebOrigin: cfg.WebOrigin, Environment: cfg.Environment})
 	server := &http.Server{Addr: ":" + cfg.Port, Handler: handler, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 0, IdleTimeout: 60 * time.Second}
 	sched := scheduler.New(logger, cfg.BackupInterval, backupManager.Run)
 	go sched.Run(rootCtx)
+	reconciliationScheduler := scheduler.New(logger, cfg.BillingReconcileInterval, func(ctx context.Context) error { _, err := billingService.Reconcile(ctx, 100); return err })
+	go reconciliationScheduler.Run(rootCtx)
 	go func() {
 		logger.Info("FluentHub API listening", "port", cfg.Port)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {

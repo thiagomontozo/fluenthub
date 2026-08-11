@@ -18,6 +18,8 @@ Storage keys are generated, paths confined and uploads size/MIME checked. New co
 
 Structured logs use request IDs and avoid passwords, session tokens, authorization headers, full answers, audio, documents and sensitive billing instructions. Audit captures actor, school, action, resource, safe metadata, IP and user agent.
 
+Asaas webhooks use a dedicated secret compared in constant time through the `asaas-access-token` header. Bodies are limited to 256 KiB, errors do not reveal database/provider details, event IDs enforce at-least-once idempotency and financial transitions execute transactionally.
+
 ## Limitations
 
 This architecture provides privacy-oriented controls but does not claim automatic legal compliance. Storage backups are local encrypted-object snapshots with checksums; PostgreSQL backup, off-site copies, key management/rotation and restore drills remain deployment responsibilities. Deployment must also address TLS, trusted proxies, incident response, consent, regional requirements, dependency review and rate limiting. No penetration test has been performed.

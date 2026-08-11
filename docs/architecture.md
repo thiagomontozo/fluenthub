@@ -20,7 +20,7 @@ React Router separates administrator, teacher, student and operator layouts. Gua
 
 PostgreSQL is authoritative for identity, academic state, assessment, billing metadata, support and audit. `ObjectStorage` keeps binary content outside the database. The initial local adapter uses random keys and a confined root; S3/MinIO/cloud adapters can preserve the same contract.
 
-`LiveClassProvider` and `BillingProvider` isolate vendors. LiveKit and Asaas adapters implement real provider protocols; mock implementations remain explicit for offline demonstrations. Live media remains at LiveKit, while FluentHub stores session control state and issues short-lived role-scoped tokens. Provider credentials stay server-side. Asaas customer/payment references are durable, while reconciliation webhooks remain future work.
+`LiveClassProvider` and `BillingProvider` isolate vendors. LiveKit and Asaas adapters implement real provider protocols; mock implementations remain explicit for offline demonstrations. Live media remains at LiveKit, while FluentHub stores session control state and issues short-lived role-scoped tokens. Provider credentials stay server-side. Asaas customer/payment references are durable; authenticated, idempotent webhooks provide fast updates and scheduled reconciliation repairs missed or delayed delivery.
 
 Local object storage is wrapped by a security pipeline: bounded quarantine, ClamAV scanning, AES-256-GCM chunk encryption and versioned envelopes. The scheduler immediately creates and then periodically repeats checksum-protected snapshots of encrypted objects. PostgreSQL backup and off-site replication remain separate deployment concerns.
 

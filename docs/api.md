@@ -21,6 +21,7 @@ All private routes are versioned below `/api/v1`. JSON errors contain `code`, sa
 ## Operations
 
 - `/billing`, `/notifications`, `/support`
+- `POST /api/v1/webhooks/asaas` is public but authenticated with `asaas-access-token`; duplicate event IDs are acknowledged without duplicate payment processing.
 - Billing creation uses the configured provider; notifications support send/read/read-all.
 - Support provides scoped ticket creation, assignment, messages, internal notes and state transitions.
 - `GET /events` opens an authenticated SSE stream distributed through PostgreSQL `LISTEN/NOTIFY`.
