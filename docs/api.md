@@ -5,7 +5,8 @@ All private routes are versioned below `/api/v1`. JSON errors contain `code`, sa
 ## Identity and configuration
 
 - `POST /api/v1/auth/login`, `/logout`, `/change-password`; `GET /auth/me`
-- `/school`, `/branding`, `/units`, `/users`, `/roles`, `/permissions`
+- `GET /setup/status`; `POST /setup/complete` performs the one-time atomic setup.
+- Authenticated resource APIs cover users, units, courses, classes, enrollments, lessons, exercises, exams, billing, notifications and support, with permission and resource-scope checks.
 - Setup progresses through welcome, school, branding, main administrator, unit, defaults, policy and finish.
 
 ## Academic and learning
@@ -19,7 +20,9 @@ All private routes are versioned below `/api/v1`. JSON errors contain `code`, sa
 ## Operations
 
 - `/billing`, `/notifications`, `/support`
-- `GET /events` opens an authenticated SSE stream.
+- Billing creation uses the configured provider; notifications support send/read/read-all.
+- Support provides scoped ticket creation, assignment, messages, internal notes and state transitions.
+- `GET /events` opens an authenticated SSE stream distributed through PostgreSQL `LISTEN/NOTIFY`.
 - `GET /api/v1/public/certificates/verify/:code` and `GET /api/v1/public/branding` are public.
 
 Example login:

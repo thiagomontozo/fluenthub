@@ -22,7 +22,7 @@ PostgreSQL is authoritative for identity, academic state, assessment, billing me
 
 `LiveClassProvider` and `BillingProvider` isolate vendors. The mock implementations make demonstration state explicit and contain no real credentials. Live media remains at the selected provider; FluentHub stores control state and authorized references.
 
-The scheduler uses one managed ticker, not one goroutine per row. Jobs query due work in batches and must be idempotent. SSE provides notification, ticket and simple lesson events from an in-memory hub.
+The scheduler uses one managed ticker, not one goroutine per row. Jobs query due work in batches and must be idempotent. SSE clients remain local to each process, while PostgreSQL `LISTEN/NOTIFY` fans event envelopes to every API replica without introducing Redis.
 
 ```mermaid
 flowchart TB
@@ -58,4 +58,4 @@ Authentication resolves an active server-side session and user. RBAC checks expl
 
 ## Shutdown and scale
 
-SIGINT/SIGTERM cancels the root context, stops scheduling, closes SSE clients, drains HTTP with a timeout, closes storage and then pgx. At multiple instances, PostgreSQL remains shared but SSE needs a shared event transport and scheduler needs leader/lease coordination. Object storage should move to a shared adapter. These are evolutionary changes, not reasons to begin with microservices.
+SIGINT/SIGTERM cancels the root context, stops scheduling and the PostgreSQL listener, closes SSE clients, drains HTTP with a timeout, closes storage and then pgx. At multiple instances, notifications already fan out through PostgreSQL; scheduler leader/lease coordination and shared object storage are still required. These are evolutionary changes, not reasons to begin with microservices.

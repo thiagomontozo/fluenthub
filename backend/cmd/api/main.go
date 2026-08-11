@@ -3,13 +3,18 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/thiagomontozo/fluenthub/backend/internal/assessment"
+	"github.com/thiagomontozo/fluenthub/backend/internal/billing"
 	"github.com/thiagomontozo/fluenthub/backend/internal/certificates"
 	"github.com/thiagomontozo/fluenthub/backend/internal/config"
 	"github.com/thiagomontozo/fluenthub/backend/internal/database"
 	"github.com/thiagomontozo/fluenthub/backend/internal/http/router"
 	"github.com/thiagomontozo/fluenthub/backend/internal/notifications"
+	"github.com/thiagomontozo/fluenthub/backend/internal/records"
 	"github.com/thiagomontozo/fluenthub/backend/internal/scheduler"
+	"github.com/thiagomontozo/fluenthub/backend/internal/setup"
 	"github.com/thiagomontozo/fluenthub/backend/internal/storage"
+	"github.com/thiagomontozo/fluenthub/backend/internal/support"
 	"github.com/thiagomontozo/fluenthub/backend/internal/users"
 	"log/slog"
 	"net/http"
@@ -39,9 +44,12 @@ func main() {
 		db.Close()
 		os.Exit(1)
 	}
-	hub := notifications.NewHub()
+	hub := notifications.NewHub(db)
+	go hub.Run(rootCtx)
 	userStore := users.NewStore(db)
-	handler := router.New(router.Dependencies{DB: db, Storage: store, Users: userStore, Certificates: certificates.New(db), Hub: hub, WebOrigin: cfg.WebOrigin, Environment: cfg.Environment})
+	billingService := billing.NewService(db, billing.MockProvider{})
+	notificationService := notifications.NewService(db, hub)
+	handler := router.New(router.Dependencies{DB: db, Storage: store, Users: userStore, Certificates: certificates.New(db), Hub: hub, Billing: billingService, Notifications: notificationService, Assessment: assessment.New(db), Support: support.NewService(db), Records: records.New(db), Setup: setup.New(db), WebOrigin: cfg.WebOrigin, Environment: cfg.Environment})
 	server := &http.Server{Addr: ":" + cfg.Port, Handler: handler, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 0, IdleTimeout: 60 * time.Second}
 	sched := scheduler.New(logger, time.Minute, func(context.Context) error { return nil })
 	go sched.Run(rootCtx)

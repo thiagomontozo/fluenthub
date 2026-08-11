@@ -64,7 +64,7 @@ flowchart LR
     Student --> Enrollment --> Lessons --> Exercises --> Exams --> AcademicResult --> Certificate
 ```
 
-Private endpoints live below `/api/v1`. PostgreSQL owns durable state; local storage is the first `ObjectStorage` adapter; the scheduler uses a bounded tick loop; SSE carries simple notifications and state events. Multi-instance event distribution is deliberately deferred.
+Private endpoints live below `/api/v1`. PostgreSQL owns durable state; local storage is the first `ObjectStorage` adapter; the scheduler uses a bounded tick loop; SSE events are distributed across API replicas through PostgreSQL `LISTEN/NOTIFY`.
 
 ## Technology Stack
 
@@ -184,7 +184,7 @@ Tickets have category, priority, state, requester, opener and current assignee. 
 
 ## Certificates
 
-Approved, completed enrollments can receive branded PDF certificates. The data model includes school identity, student/course/level, workload, completion date, score, number, verification code, storage key and revocation history. PDF/QR rendering is an adapter responsibility in this experimental release.
+Approved, completed enrollments can receive branded PDF certificates. The renderer supports classic and modern layouts, validated colors, school identity, student/course/level, workload, completion date, optional score, number and a QR verification code. Generated PDFs use opaque object-storage keys.
 
 ## Certificate Verification
 
@@ -213,7 +213,7 @@ Prerequisites: Go 1.24+, Node.js 22+, PostgreSQL 17+ and a migration runner comp
 3. Apply `backend/migrations/*.up.sql` in numeric order.
 4. From `backend`, run `go run ./cmd/api`.
 5. From `frontend`, install dependencies and run `npm run dev`.
-6. Open `/setup` to model the initial school configuration.
+6. Open `/setup` to atomically create the school, branding, first administrator, first unit, system roles, initial skills and academic policies.
 
 These commands are documentation only; they were not executed for this delivery.
 
@@ -256,10 +256,9 @@ Thirteen ADRs document the main architectural choices: Go, React/TypeScript, mod
 - Experimental foundation; no claim of production readiness.
 - No automated tests, CI, build verification or runtime validation yet.
 - Mock live and billing providers only; demonstration invoice data is not payable.
-- Certificate PDF/QR adapter contract and schema are present, but final renderer/template hardening remains.
-- SSE is in-process and needs a shared event layer for multiple API replicas.
 - Local object storage requires deployment-level backup, encryption and malware scanning decisions.
-- Setup screens and module screens establish workflows; broader CRUD endpoint coverage remains incremental.
+- Certificate layout should still be visually reviewed against each school's uploaded assets before real issuance.
+- A frontend dependency lockfile could not be generated because Node/npm was unavailable in the authoring environment; dependency versions are exact in `package.json`.
 - Legal/privacy compliance is deployment- and organization-specific.
 
 ## Roadmap

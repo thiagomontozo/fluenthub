@@ -3,8 +3,9 @@ import { AuthProvider, useAuth } from './AuthProvider'
 import { BrandingProvider } from './BrandingProvider'
 import { WorkspaceLayout } from '../layouts/WorkspaceLayout'
 import { AdminDashboard, OperatorDashboard, StudentDashboard, TeacherDashboard } from '../pages/Dashboards'
-import { BrandingPage, CertificateVerify, ExamWorkspace, LiveClassPage, LoginPage, SetupWizard } from '../pages/FeaturePages'
-import { ResourcePage } from '../pages/ResourcePage'
+import { BrandingPage, CertificateVerify, ExamWorkspace, LiveClassPage, LoginPage } from '../pages/FeaturePages'
+import { SetupWizard } from '../pages/SetupWizard'
+import { ConnectedResourcePage as ResourcePage } from '../pages/ConnectedResourcePage'
 import type { Role } from '../types'
 function Guard({role}:{role:Role}){const {user,loading}=useAuth();const location=useLocation();if(loading)return <div className="loading-page"><span/><p>Loading your workspace…</p></div>;if(!user)return <Navigate to="/login" state={{from:location}} replace/>;const normalized=user.roles.map(v=>v.toLowerCase());if(!normalized.includes(role)&&!(role==='administrator'&&normalized.includes('admin')))return <Navigate to={`/${normalized[0]??'student'}`} replace/>;return <WorkspaceLayout role={role}/>}
 const adminPages:Record<string,string>={units:'Units',courses:'Courses',levels:'Levels',modules:'Modules',classes:'Classes',enrollments:'Enrollments',users:'Users',administrators:'Administrators',teachers:'Teachers',students:'Students',operators:'Operators','academic-policy':'Academic policy',billing:'Billing',support:'Support',certificates:'Certificates',audit:'Audit',settings:'Settings'}
