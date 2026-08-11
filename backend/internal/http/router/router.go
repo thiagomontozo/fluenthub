@@ -15,6 +15,7 @@ import (
 	"github.com/thiagomontozo/fluenthub/backend/internal/billing"
 	"github.com/thiagomontozo/fluenthub/backend/internal/certificates"
 	httpmw "github.com/thiagomontozo/fluenthub/backend/internal/http/middleware"
+	"github.com/thiagomontozo/fluenthub/backend/internal/liveclasses"
 	"github.com/thiagomontozo/fluenthub/backend/internal/notifications"
 	"github.com/thiagomontozo/fluenthub/backend/internal/records"
 	"github.com/thiagomontozo/fluenthub/backend/internal/setup"
@@ -26,6 +27,8 @@ import (
 type Dependencies struct {
 	DB                     *pgxpool.Pool
 	Storage                storage.ObjectStorage
+	StorageReady           func(context.Context) error
+	LiveClasses            *liveclasses.Service
 	Users                  *users.Store
 	Certificates           *certificates.Service
 	Hub                    *notifications.Hub
@@ -55,6 +58,12 @@ func New(d Dependencies) http.Handler {
 		if err != nil {
 			writeError(w, r, http.StatusServiceUnavailable, "NOT_READY", "Storage unavailable")
 			return
+		}
+		if d.StorageReady != nil {
+			if err := d.StorageReady(ctx); err != nil {
+				writeError(w, r, http.StatusServiceUnavailable, "NOT_READY", "Storage malware scanner unavailable")
+				return
+			}
 		}
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
 	})
@@ -382,6 +391,65 @@ func New(d Dependencies) http.Handler {
 		}
 		writeJSON(w, http.StatusCreated, map[string]string{"id": id})
 	})))
+	protected.Handle("POST /api/v1/lessons/{lessonId}/live-session", httpmw.Require("lessons.manage", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, _ := httpmw.User(r.Context())
+		session, err := d.LiveClasses.Create(r.Context(), user.SchoolID, user.ID, r.PathValue("lessonId"), slices.Contains(user.Permissions, "school.manage"))
+		if err != nil {
+			writeError(w, r, http.StatusUnprocessableEntity, "LIVE_SESSION_CREATE_FAILED", err.Error())
+			return
+		}
+		writeJSON(w, http.StatusCreated, session)
+	})))
+	protected.Handle("POST /api/v1/live-sessions/{id}/start", httpmw.Require("lessons.manage", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, _ := httpmw.User(r.Context())
+		session, err := d.LiveClasses.Start(r.Context(), user.SchoolID, user.ID, r.PathValue("id"), slices.Contains(user.Permissions, "school.manage"))
+		if err != nil {
+			writeError(w, r, http.StatusUnprocessableEntity, "LIVE_SESSION_START_FAILED", err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, session)
+	})))
+	protected.Handle("POST /api/v1/live-sessions/{id}/end", httpmw.Require("lessons.manage", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, _ := httpmw.User(r.Context())
+		session, err := d.LiveClasses.End(r.Context(), user.SchoolID, user.ID, r.PathValue("id"), slices.Contains(user.Permissions, "school.manage"))
+		if err != nil {
+			writeError(w, r, http.StatusUnprocessableEntity, "LIVE_SESSION_END_FAILED", err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, session)
+	})))
+	protected.HandleFunc("GET /api/v1/live-sessions/{id}/join", func(w http.ResponseWriter, r *http.Request) {
+		user, _ := httpmw.User(r.Context())
+		join, err := d.LiveClasses.Join(r.Context(), user.SchoolID, user.ID, r.PathValue("id"), slices.Contains(user.Permissions, "school.manage"))
+		if err != nil {
+			writeError(w, r, http.StatusForbidden, "LIVE_SESSION_JOIN_DENIED", err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, join)
+	})
+	protected.HandleFunc("GET /api/v1/lessons/{lessonId}/live-join", func(w http.ResponseWriter, r *http.Request) {
+		user, _ := httpmw.User(r.Context())
+		join, err := d.LiveClasses.JoinLesson(r.Context(), user.SchoolID, user.ID, r.PathValue("lessonId"), slices.Contains(user.Permissions, "school.manage"))
+		if err != nil {
+			writeError(w, r, http.StatusForbidden, "LIVE_SESSION_JOIN_DENIED", err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, join)
+	})
+	for _, action := range []struct {
+		path  string
+		start bool
+	}{{"start", true}, {"stop", false}} {
+		action := action
+		protected.Handle("POST /api/v1/live-sessions/{id}/recording/"+action.path, httpmw.Require("lessons.manage", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			user, _ := httpmw.User(r.Context())
+			if err := d.LiveClasses.Recording(r.Context(), user.SchoolID, user.ID, r.PathValue("id"), action.start, slices.Contains(user.Permissions, "school.manage")); err != nil {
+				writeError(w, r, http.StatusUnprocessableEntity, "LIVE_RECORDING_FAILED", err.Error())
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+		})))
+	}
 	mux.Handle("/api/v1/", httpmw.Authenticate(d.Users, protected))
 	return httpmw.RequestID(httpmw.CORS(d.WebOrigin, mux))
 }
@@ -490,5 +558,5 @@ func writeJSON(w http.ResponseWriter, status int, value any) {
 	_ = json.NewEncoder(w).Encode(value)
 }
 func writeError(w http.ResponseWriter, r *http.Request, status int, code, message string) {
-	writeJSON(w, status, map[string]any{"error": map[string]string{"code": code, "message": message, "requestId": httpmw.RequestID(r.Context())}})
+	writeJSON(w, status, map[string]any{"error": map[string]string{"code": code, "message": message, "requestId": httpmw.RequestIDValue(r.Context())}})
 }

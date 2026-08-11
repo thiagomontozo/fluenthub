@@ -52,18 +52,27 @@ func (s *LocalObjectStorage) Put(_ context.Context, namespace string, source io.
 	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return "", err
 	}
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o640)
+	f, err := os.CreateTemp(filepath.Dir(path), ".upload-*.tmp")
 	if err != nil {
 		return "", err
 	}
+	temporaryPath := f.Name()
+	defer os.Remove(temporaryPath)
+	if err := f.Chmod(0o640); err != nil {
+		_ = f.Close()
+		return "", err
+	}
 	written, copyErr := io.Copy(f, io.LimitReader(source, s.maxBytes+1))
+	syncErr := f.Sync()
 	closeErr := f.Close()
-	if copyErr != nil || closeErr != nil || written > s.maxBytes {
-		_ = os.Remove(path)
+	if copyErr != nil || syncErr != nil || closeErr != nil || written > s.maxBytes {
 		if written > s.maxBytes {
 			return "", errors.New("upload exceeds configured limit")
 		}
-		return "", errors.Join(copyErr, closeErr)
+		return "", errors.Join(copyErr, syncErr, closeErr)
+	}
+	if err := os.Rename(temporaryPath, path); err != nil {
+		return "", err
 	}
 	return key, nil
 }

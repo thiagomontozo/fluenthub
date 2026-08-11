@@ -16,6 +16,7 @@ type JoinInfo struct {
 	ExpiresAt  time.Time
 }
 type LiveClassProvider interface {
+	Name() string
 	CreateSession(context.Context, string) (Session, error)
 	StartSession(context.Context, Session) (Session, error)
 	EndSession(context.Context, Session) (Session, error)
@@ -25,6 +26,8 @@ type LiveClassProvider interface {
 	StopRecording(context.Context, Session) error
 }
 type MockProvider struct{}
+
+func (MockProvider) Name() string { return "mock" }
 
 func (MockProvider) CreateSession(_ context.Context, lessonID string) (Session, error) {
 	id := uuid.NewString()

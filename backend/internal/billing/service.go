@@ -29,11 +29,23 @@ func (s *Service) Create(ctx context.Context, schoolID, actorID string, input Cr
 	if input.StudentID == "" || len(input.Description) < 3 || input.AmountCents < 1 || input.DueDate.IsZero() {
 		return Invoice{}, errors.New("student, description, positive amountCents and dueDate are required")
 	}
-	var ownsStudent bool
-	if err := s.db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE id=$1 AND school_id=$2 AND active=true)`, input.StudentID, schoolID).Scan(&ownsStudent); err != nil || !ownsStudent {
+	var studentName, studentEmail string
+	if err := s.db.QueryRow(ctx, `SELECT name,email FROM users WHERE id=$1 AND school_id=$2 AND active=true`, input.StudentID, schoolID).Scan(&studentName, &studentEmail); err != nil {
 		return Invoice{}, errors.New("student not found in this school")
 	}
-	invoice, err := s.provider.CreateInvoice(ctx, Invoice{ID: uuid.NewString(), SchoolID: schoolID, StudentID: input.StudentID, EnrollmentID: input.EnrollmentID, Description: input.Description, AmountCents: input.AmountCents, DueDate: input.DueDate})
+	var customerReference string
+	err := s.db.QueryRow(ctx, `SELECT COALESCE(provider_customer_reference,'') FROM billing_accounts WHERE school_id=$1 AND student_id=$2 AND active=true`, schoolID, input.StudentID).Scan(&customerReference)
+	if err != nil || customerReference == "" {
+		customerReference, err = s.provider.EnsureCustomer(ctx, Customer{ExternalID: input.StudentID, Name: studentName, Email: studentEmail})
+		if err != nil {
+			return Invoice{}, err
+		}
+		_, err = s.db.Exec(ctx, `INSERT INTO billing_accounts(school_id,student_id,provider_customer_reference) VALUES($1,$2,$3) ON CONFLICT(school_id,student_id) DO UPDATE SET provider_customer_reference=EXCLUDED.provider_customer_reference,active=true`, schoolID, input.StudentID, customerReference)
+		if err != nil {
+			return Invoice{}, err
+		}
+	}
+	invoice, err := s.provider.CreateInvoice(ctx, Invoice{ID: uuid.NewString(), SchoolID: schoolID, StudentID: input.StudentID, CustomerReference: customerReference, EnrollmentID: input.EnrollmentID, Description: input.Description, AmountCents: input.AmountCents, DueDate: input.DueDate})
 	if err != nil {
 		return Invoice{}, err
 	}

@@ -11,6 +11,8 @@ uploads/
 *.dump
 *.sql.gz
 generated-certificates/
+output/
+tmp/
 .idea/
 .vscode/
 .DS_Store

@@ -8,7 +8,6 @@ import (
 	"github.com/go-pdf/fpdf"
 	"github.com/skip2/go-qrcode"
 	"github.com/thiagomontozo/fluenthub/backend/internal/storage"
-	"io"
 	"strconv"
 	"strings"
 	"time"
@@ -24,14 +23,29 @@ type PDFInput struct {
 type PDFRenderer struct{ Storage storage.ObjectStorage }
 
 func (r PDFRenderer) Generate(ctx context.Context, input PDFInput) (string, error) {
-	if err := validatePDFInput(input); err != nil {
+	output, err := r.Render(input)
+	if err != nil {
 		return "", err
+	}
+	key, err := r.Storage.Put(ctx, "certificates", bytes.NewReader(output))
+	if err != nil {
+		return "", fmt.Errorf("store PDF: %w", err)
+	}
+	return key, nil
+}
+
+func (PDFRenderer) Render(input PDFInput) ([]byte, error) {
+	if err := validatePDFInput(input); err != nil {
+		return nil, err
 	}
 	qr, err := qrcode.Encode(input.VerificationBaseURL+"/certificate/verify?code="+input.VerificationCode, qrcode.Medium, 256)
 	if err != nil {
-		return "", fmt.Errorf("encode QR: %w", err)
+		return nil, fmt.Errorf("encode QR: %w", err)
 	}
 	pdf := fpdf.New("L", "mm", "A4", "")
+	pdf.SetTitle(input.Title+" - "+input.CertificateNumber, true)
+	pdf.SetAuthor(input.SchoolName, true)
+	pdf.SetSubject("Verifiable course completion certificate", true)
 	pdf.SetMargins(22, 18, 22)
 	pdf.AddPage()
 	primary := parseColor(input.PrimaryColor, [3]int{79, 70, 229})
@@ -57,6 +71,12 @@ func (r PDFRenderer) Generate(ctx context.Context, input PDFInput) (string, erro
 	}
 	pdf.CellFormat(0, 12, input.SchoolName, "", 1, "C", false, 0, "")
 	pdf.Ln(8)
+	if input.Template == "modern" {
+		pdf.SetFillColor(248, 250, 252)
+		pdf.Rect(28, 44, 241, 96, "F")
+		pdf.SetFillColor(accent[0], accent[1], accent[2])
+		pdf.Rect(28, 44, 2.5, 96, "F")
+	}
 	pdf.SetFont("Helvetica", "B", 30)
 	pdf.SetTextColor(15, 23, 42)
 	pdf.CellFormat(0, 16, input.Title, "", 1, "C", false, 0, "")
@@ -76,21 +96,23 @@ func (r PDFRenderer) Generate(ctx context.Context, input PDFInput) (string, erro
 	}
 	pdf.CellFormat(0, 9, details, "", 1, "C", false, 0, "")
 	pdf.RegisterImageOptionsReader("certificate-qr", fpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}, bytes.NewReader(qr))
-	pdf.ImageOptions("certificate-qr", 244, 145, 30, 30, false, fpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}, 0, "")
+	pdf.ImageOptions("certificate-qr", 244, 148, 30, 30, false, fpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}, 0, "")
+	pdf.SetXY(238, 180)
+	pdf.SetFont("Helvetica", "B", 7)
+	pdf.SetTextColor(primary[0], primary[1], primary[2])
+	pdf.CellFormat(42, 5, "SCAN TO VERIFY", "", 0, "C", false, 0, "")
 	pdf.SetY(160)
 	pdf.SetFont("Helvetica", "", 9)
 	pdf.SetTextColor(71, 85, 105)
-	pdf.CellFormat(0, 6, "Certificate "+input.CertificateNumber+" | Verification "+input.VerificationCode, "", 1, "C", false, 0, "")
-	pdf.CellFormat(0, 6, input.Footer, "", 1, "C", false, 0, "")
+	pdf.SetX(25)
+	pdf.CellFormat(205, 6, "Certificate "+input.CertificateNumber+" | Verification "+input.VerificationCode, "", 1, "C", false, 0, "")
+	pdf.SetX(25)
+	pdf.CellFormat(205, 6, input.Footer, "", 1, "C", false, 0, "")
 	var output bytes.Buffer
 	if err := pdf.Output(&output); err != nil {
-		return "", fmt.Errorf("render PDF: %w", err)
+		return nil, fmt.Errorf("render PDF: %w", err)
 	}
-	key, err := r.Storage.Put(ctx, "certificates", io.Reader(&output))
-	if err != nil {
-		return "", fmt.Errorf("store PDF: %w", err)
-	}
-	return key, nil
+	return output.Bytes(), nil
 }
 
 func validatePDFInput(input PDFInput) error {

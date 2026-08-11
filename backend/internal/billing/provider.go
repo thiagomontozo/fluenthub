@@ -9,19 +9,28 @@ import (
 )
 
 type Invoice struct {
-	ID, SchoolID, StudentID, Description, Status, Provider, ProviderReference string
-	EnrollmentID                                                              *string
-	AmountCents                                                               int64
-	DueDate                                                                   time.Time
-	BoletoURL, BoletoBarcode                                                  *string
-	IssuedAt, PaidAt, CancelledAt                                             *time.Time
+	ID, SchoolID, StudentID, Description, Status, Provider, ProviderReference, CustomerReference string
+	EnrollmentID                                                                                 *string
+	AmountCents                                                                                  int64
+	DueDate                                                                                      time.Time
+	BoletoURL, BoletoBarcode                                                                     *string
+	IssuedAt, PaidAt, CancelledAt                                                                *time.Time
 }
 type BillingProvider interface {
+	EnsureCustomer(context.Context, Customer) (string, error)
 	CreateInvoice(context.Context, Invoice) (Invoice, error)
 	GetInvoice(context.Context, string) (Invoice, error)
 	CancelInvoice(context.Context, string) (Invoice, error)
 }
+type Customer struct{ ExternalID, Name, Email string }
 type MockProvider struct{}
+
+func (MockProvider) EnsureCustomer(_ context.Context, customer Customer) (string, error) {
+	if customer.ExternalID == "" || customer.Name == "" {
+		return "", errors.New("customer identity is required")
+	}
+	return "DEMO-CUSTOMER-" + customer.ExternalID, nil
+}
 
 func (MockProvider) CreateInvoice(_ context.Context, invoice Invoice) (Invoice, error) {
 	if invoice.AmountCents <= 0 {

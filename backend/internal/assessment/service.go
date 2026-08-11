@@ -176,7 +176,7 @@ func (s *Service) GradeExercise(ctx context.Context, schoolID, teacherID, attemp
 func (s *Service) GradeExam(ctx context.Context, schoolID, teacherID, attemptID string, input GradeInput) error {
 	return s.grade(ctx, "exam", schoolID, teacherID, attemptID, input)
 }
-func (s *Service) grade(ctx, kind, schoolID, teacherID, attemptID string, input GradeInput) error {
+func (s *Service) grade(ctx context.Context, kind, schoolID, teacherID, attemptID string, input GradeInput) error {
 	if input.ScoreScaled < 0 {
 		return errors.New("score cannot be negative")
 	}

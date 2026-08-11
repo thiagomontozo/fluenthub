@@ -17,6 +17,7 @@ func New(logger *slog.Logger, interval time.Duration, jobs ...Job) *Scheduler {
 	return &Scheduler{logger: logger, interval: interval, jobs: jobs}
 }
 func (s *Scheduler) Run(ctx context.Context) {
+	s.runJobs(ctx)
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
 	for {
@@ -24,11 +25,15 @@ func (s *Scheduler) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			for _, job := range s.jobs {
-				if err := job(ctx); err != nil {
-					s.logger.Error("scheduled job failed", "error", err)
-				}
-			}
+			s.runJobs(ctx)
+		}
+	}
+}
+
+func (s *Scheduler) runJobs(ctx context.Context) {
+	for _, job := range s.jobs {
+		if err := job(ctx); err != nil {
+			s.logger.Error("scheduled job failed", "error", err)
 		}
 	}
 }
