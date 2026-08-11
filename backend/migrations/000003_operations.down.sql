@@ -1,0 +1,3 @@
+ALTER TABLE enrollments DROP CONSTRAINT IF EXISTS enrollments_certificate_fk;
+DROP TABLE IF EXISTS setup_progress,audit_events,certificates,support_attachments,support_assignments,support_messages,support_tickets,notifications,notification_templates,payments,invoices,billing_accounts,academic_overrides,academic_results,academic_policies CASCADE;
+DROP SEQUENCE IF EXISTS support_ticket_number_seq;
