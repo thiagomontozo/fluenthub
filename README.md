@@ -1,5 +1,13 @@
 # FluentHub
 
+![Status: Experimental](https://img.shields.io/badge/status-experimental_v0.1.0-f59e0b)
+![License: MIT](https://img.shields.io/badge/license-MIT-2563eb.svg)
+![Go backend](https://img.shields.io/badge/Go-backend-00ADD8?logo=go&logoColor=white)
+![React frontend](https://img.shields.io/badge/React-frontend-61DAFB?logo=react&logoColor=0b1f2a)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-primary_store-4169E1?logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-containerized-2496ED?logo=docker&logoColor=white)
+
 Full-stack language school management and learning platform built with Go, React and TypeScript.
 
 > **Current status: Experimental.** FluentHub 0.1.0 is an architectural implementation and product foundation. Automated tests, builds, migrations and runtime validation have intentionally not been executed in this version.
